@@ -16,8 +16,8 @@ class BookApp(tk.Frame):
         list_frame = tk.Frame(parent)
         list_frame.pack(side="left", padx=20)
 
-        # Tạo bảng Sách
-        columns = ("Mã Sách", "Tên Sách", "Mã Tác Giả", "Mã Thể Loại", "Mã NXB", "Năm XB")
+        # Tạo bảng Sách với thêm trường Số Lượng
+        columns = ("Mã Sách", "Tên Sách", "Mã Tác Giả", "Mã Thể Loại", "Mã NXB", "Năm XB", "Số Lượng")
         self.book_table = ttk.Treeview(list_frame, columns=columns, show="headings", height=10)
 
         # Cấu hình tiêu đề và độ rộng cột
@@ -41,21 +41,21 @@ class BookApp(tk.Frame):
         """Nạp dữ liệu sách từ MySQL."""
         try:
             connection = mysql.connector.connect(
-                host='localhost',      
-                user='root',          
-                password='111111', 
-                database='qlthuvien'  
+                host='localhost',
+                user='root',
+                password='111111',
+                database='qlthuvien'
             )
 
             cursor = connection.cursor()
-            cursor.execute("SELECT MaSach, TenSach, MaTG, MaTL, MaNXB, NamXB FROM Sach")
+            cursor.execute("SELECT MaSach, TenSach, MaTG, MaTL, MaNXB, NamXB, SoLuong FROM Sach")
 
             # Xóa dữ liệu hiện tại trong bảng
             self.book_table.delete(*self.book_table.get_children())
 
             # Chèn dữ liệu mới
-            for (book_id, book_name, author_id, genre_id, publisher_id, year) in cursor:
-                self.book_table.insert('', 'end', values=(book_id, book_name, author_id, genre_id, publisher_id, year))
+            for (book_id, book_name, author_id, genre_id, publisher_id, year, quantity) in cursor:
+                self.book_table.insert('', 'end', values=(book_id, book_name, author_id, genre_id, publisher_id, year, quantity))
 
         except mysql.connector.Error as err:
             print(f"Lỗi khi kết nối MySQL: {err}")
@@ -78,6 +78,8 @@ class BookApp(tk.Frame):
             self.publisher_code_combo.set(book_data[4])
             self.year_entry.delete(0, tk.END)
             self.year_entry.insert(0, book_data[5])
+            self.quantity_entry.delete(0, tk.END)
+            self.quantity_entry.insert(0, book_data[6])
 
     def create_book_info(self, parent):
         info_frame = tk.Frame(parent)
@@ -113,9 +115,13 @@ class BookApp(tk.Frame):
         self.year_entry = tk.Entry(info_frame)
         self.year_entry.grid(row=6, column=1, padx=10, pady=5)
 
+        tk.Label(info_frame, text="Số Lượng:").grid(row=7, column=0, sticky="e")
+        self.quantity_entry = tk.Entry(info_frame)
+        self.quantity_entry.grid(row=7, column=1, padx=10, pady=5)
+
         # Nút chức năng
         btn_frame = tk.Frame(info_frame)
-        btn_frame.grid(row=7, column=0, columnspan=2, pady=10)
+        btn_frame.grid(row=8, column=0, columnspan=2, pady=10)
 
         add_button = tk.Button(btn_frame, text="THÊM", width=8, command=self.add_book)
         add_button.grid(row=0, column=0, padx=5)
@@ -131,17 +137,17 @@ class BookApp(tk.Frame):
 
         # Phần tìm kiếm
         search_label = tk.Label(info_frame, text="TÌM KIẾM", font=("Arial", 12, "bold"))
-        search_label.grid(row=8, column=0, columnspan=2, pady=10)
+        search_label.grid(row=9, column=0, columnspan=2, pady=10)
 
-        tk.Label(info_frame, text="Tên Sách:").grid(row=9, column=0, sticky="e")
+        tk.Label(info_frame, text="Tên Sách:").grid(row=10, column=0, sticky="e")
         self.search_name_entry = tk.Entry(info_frame)
-        self.search_name_entry.grid(row=9, column=1, padx=10, pady=5)
+        self.search_name_entry.grid(row=10, column=1, padx=10, pady=5)
 
         search_button = tk.Button(info_frame, text="TÌM KIẾM", width=10, command=self.search_book)
-        search_button.grid(row=10, column=0, columnspan=2, pady=5)
+        search_button.grid(row=11, column=0, columnspan=2, pady=5)
 
         cancel_button = tk.Button(info_frame, text="HỦY TÌM KIẾM", width=10, command=self.reset_search)
-        cancel_button.grid(row=11, column=0, columnspan=2, pady=5)
+        cancel_button.grid(row=12, column=0, columnspan=2, pady=5)
 
         # Nạp dữ liệu cho các combobox từ MySQL
         self.load_combobox_data()
@@ -187,6 +193,7 @@ class BookApp(tk.Frame):
         genre_id = self.genre_code_combo.get()
         publisher_id = self.publisher_code_combo.get()
         year = self.year_entry.get()
+        quantity = self.quantity_entry.get()
 
         try:
             connection = mysql.connector.connect(
@@ -196,8 +203,8 @@ class BookApp(tk.Frame):
                 database='qlthuvien'
             )
             cursor = connection.cursor()
-            cursor.execute("INSERT INTO Sach (MaSach, TenSach, MaTG, MaTL, MaNXB, NamXB) VALUES (%s, %s, %s, %s, %s, %s)", 
-                           (book_id, book_name, author_id, genre_id, publisher_id, year))
+            cursor.execute("INSERT INTO Sach (MaSach, TenSach, MaTG, MaTL, MaNXB, NamXB, SoLuong) VALUES (%s, %s, %s, %s, %s, %s, %s)", 
+                           (book_id, book_name, author_id, genre_id, publisher_id, year, quantity))
             connection.commit()
 
             # Xóa bảng cũ và nạp lại dữ liệu sau khi thêm
@@ -222,6 +229,7 @@ class BookApp(tk.Frame):
         genre_id = self.genre_code_combo.get()
         publisher_id = self.publisher_code_combo.get()
         year = self.year_entry.get()
+        quantity = self.quantity_entry.get()
 
         try:
             connection = mysql.connector.connect(
@@ -231,8 +239,8 @@ class BookApp(tk.Frame):
                 database='qlthuvien'
             )
             cursor = connection.cursor()
-            cursor.execute("UPDATE Sach SET TenSach=%s, MaTG=%s, MaTL=%s, MaNXB=%s, NamXB=%s WHERE MaSach=%s", 
-                           (book_name, author_id, genre_id, publisher_id, year, book_id))
+            cursor.execute("UPDATE Sach SET TenSach=%s, MaTG=%s, MaTL=%s, MaNXB=%s, NamXB=%s, SoLuong=%s WHERE MaSach=%s", 
+                           (book_name, author_id, genre_id, publisher_id, year, quantity, book_id))
             connection.commit()
 
             # Xóa bảng cũ và nạp lại dữ liệu sau khi cập nhật
@@ -282,6 +290,7 @@ class BookApp(tk.Frame):
         self.genre_code_combo.set('')
         self.publisher_code_combo.set('')
         self.year_entry.delete(0, tk.END)
+        self.quantity_entry.delete(0, tk.END)
 
     def search_book(self):
         """Tìm kiếm sách theo tên."""
@@ -294,12 +303,12 @@ class BookApp(tk.Frame):
                 database='qlthuvien'
             )
             cursor = connection.cursor()
-            cursor.execute("SELECT MaSach, TenSach, MaTG, MaTL, MaNXB, NamXB FROM Sach WHERE TenSach LIKE %s", 
+            cursor.execute("SELECT MaSach, TenSach, MaTG, MaTL, MaNXB, NamXB, SoLuong FROM Sach WHERE TenSach LIKE %s", 
                            ('%' + search_name + '%',))
 
             self.book_table.delete(*self.book_table.get_children())  # Xóa dữ liệu hiện có
-            for (book_id, book_name, author_id, genre_id, publisher_id, year) in cursor:
-                self.book_table.insert('', 'end', values=(book_id, book_name, author_id, genre_id, publisher_id, year))
+            for (book_id, book_name, author_id, genre_id, publisher_id, year, quantity) in cursor:
+                self.book_table.insert('', 'end', values=(book_id, book_name, author_id, genre_id, publisher_id, year, quantity))
 
         except mysql.connector.Error as err:
             print(f"Lỗi khi tìm kiếm sách: {err}")
@@ -312,3 +321,10 @@ class BookApp(tk.Frame):
         """Đặt lại tìm kiếm và nạp lại dữ liệu."""
         self.search_name_entry.delete(0, tk.END)
         self.load_book_data()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.title("Quản lý Sách")
+    app = BookApp(root)
+    app.pack(fill="both", expand=True)
+    root.mainloop()
